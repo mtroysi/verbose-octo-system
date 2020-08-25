@@ -116,12 +116,36 @@ exports.item_create_post = [
 
 // Display Item delete form on GET.
 exports.item_delete_get = function(req, res) {
-    res.send('NOT IMPLEMENTED: Item delete GET');
+  async.parallel({
+    item: function(callback) {
+        Item.findById(req.params.id).exec(callback);
+    },
+  }, function(err, results) {
+      if (err) { return next(err); }
+      if (results.item==null) { // No results.
+          res.redirect('/catalog/items');
+      }
+      // Successful, so render.
+      res.render('item_delete', { title: 'Delete Item', item: results.item } );
+  });
 };
 
 // Handle Item delete on POST.
 exports.item_delete_post = function(req, res) {
-    res.send('NOT IMPLEMENTED: Item delete POST');
+  async.parallel({
+    item: function(callback) {
+        Item.findById(req.body.itemid).exec(callback);
+    },
+}, function(err, results) {
+    if (err) { return next(err); }
+    // Success
+    // Delete object and redirect to the list of items.
+    Item.findByIdAndRemove(req.body.itemid, function deleteItem(err) {
+        if (err) { return next(err); }
+        // Success - go to item list
+        res.redirect('/catalog/items')
+    })
+});
 };
 
 // Display Item update form on GET.
