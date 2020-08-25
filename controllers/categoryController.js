@@ -1,6 +1,8 @@
 var Category = require('../models/category');
 var Item = require('../models/item');
 var async = require('async');
+const { body,validationResult } = require('express-validator/check');
+const { sanitizeBody } = require('express-validator/filter');
 
 // Display list of all Categories.
 exports.category_list = function(req, res) {
@@ -38,13 +40,48 @@ exports.category_detail = function(req, res) {
 
 // Display Category create form on GET.
 exports.category_create_get = function(req, res) {
-    res.send('NOT IMPLEMENTED: Category create GET');
+    res.render('category_form', { title: 'Create Category' });
 };
 
 // Handle Category create on POST.
-exports.category_create_post = function(req, res) {
-    res.send('NOT IMPLEMENTED: Category create POST');
-};
+exports.category_create_post = [
+
+    // Validate fields.
+    body('name').isLength({ min: 1 }).trim().withMessage('Name must be specified.'),
+    body('description').isLength({ min: 1 }).trim().withMessage('Description must be specified.'),
+
+    // Sanitize fields.
+    sanitizeBody('name').escape(),
+    sanitizeBody('description').escape(),
+
+    // Process request after validation and sanitization.
+    (req, res, next) => {
+
+        // Extract the validation errors from a request.
+        const errors = validationResult(req);
+
+        if (!errors.isEmpty()) {
+            // There are errors. Render form again with sanitized values/errors messages.
+            res.render('category_form', { title: 'Create Category', category: req.body, errors: errors.array() });
+            return;
+        }
+        else {
+            // Data from form is valid.
+
+            // Create a Category object with escaped and trimmed data.
+            var category = new Category(
+                {
+                    name: req.body.name,
+                    description: req.body.description,
+                });
+            category.save(function (err) {
+                if (err) { return next(err); }
+                // Successful - redirect to new category record.
+                res.redirect(category.url);
+            });
+        }
+    }
+];
 
 // Display Category delete form on GET.
 exports.category_delete_get = function(req, res) {
