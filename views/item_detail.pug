@@ -2,6 +2,11 @@ extends layout
 
 block content
   h1 #{item.name}
+
+  if item.image
+    img(src="/uploads/"+item.image)
+  else 
+    p This item has no image.
   
   p #[strong Category:] 
     a(href=item.category.url) #{item.category.name}

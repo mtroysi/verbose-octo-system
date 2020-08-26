@@ -3,6 +3,8 @@ var Category = require('../models/category');
 var async = require('async');
 const { body,validationResult } = require('express-validator/check');
 const { sanitizeBody } = require('express-validator/filter');
+var multer  = require('multer')
+var upload = multer({ dest: 'uploads/' })
 
 exports.index = function(req, res) {
   async.parallel({
@@ -86,7 +88,8 @@ exports.item_create_post = [
           category: req.body.category,
           description: req.body.description,
           price: req.body.price,
-          number_in_stock: req.body.number_in_stock
+          number_in_stock: req.body.number_in_stock,
+          image: req.file ? req.file.filename : undefined,
          });
 
       if (!errors.isEmpty()) {
@@ -99,7 +102,7 @@ exports.item_create_post = [
               },
           }, function(err, results) {
               if (err) { return next(err); }
-              res.render('item_form', { title: 'Create Item', catgories: results.categories, item: item, errors: errors.array() });
+              res.render('item_form', { title: 'Create Item', categories: results.categories, item: item, errors: errors.array() });
           });
           return;
       }
@@ -196,6 +199,7 @@ exports.item_update_post = [
           description: req.body.description,
           price: req.body.price,
           number_in_stock: req.body.number_in_stock,
+          image: req.file ? req.file.filename : undefined,
           _id:req.params.id //This is required, or a new ID will be assigned!
          });
 
