@@ -150,10 +150,76 @@ exports.item_delete_post = function(req, res) {
 
 // Display Item update form on GET.
 exports.item_update_get = function(req, res) {
-    res.send('NOT IMPLEMENTED: Item update GET');
+        // Get item and categories for form.
+        async.parallel({
+          item: function(callback) {
+              Item.findById(req.params.id).populate('category').exec(callback);
+          },
+          categories: function(callback) {
+              Category.find(callback);
+          },
+          }, function(err, results) {
+              if (err) { return next(err); }
+              if (results.item==null) { // No results.
+                  var err = new Error('Item not found');
+                  err.status = 404;
+                  return next(err);
+              }
+              // Success.
+              res.render('item_form', { title: 'Update Item', item: results.item, categories: results.categories });
+          });
 };
 
 // Handle Item update on POST.
-exports.item_update_post = function(req, res) {
-    res.send('NOT IMPLEMENTED: Item update POST');
-};
+exports.item_update_post = [
+ 
+  // Validate fields.
+  body('name', 'Name must not be empty.').trim().isLength({ min: 1 }),
+  body('category', 'Category must not be empty.').trim().isLength({ min: 1 }),
+  body('description', 'Description must not be empty.').trim().isLength({ min: 1 }),
+  body('price', 'Price must not be empty').trim().isLength({ min: 1 }),
+  body('number_in_stock', 'Number in stock must not be empty').trim().isLength({ min: 1 }),
+
+  // Sanitize fields.
+  sanitizeBody('*').escape(),
+
+  // Process request after validation and sanitization.
+  (req, res, next) => {
+
+      // Extract the validation errors from a request.
+      const errors = validationResult(req);
+
+      // Create a Item object with escaped/trimmed data and old id.
+      var item = new Item(
+        { name: req.body.name,
+          category: req.body.category,
+          description: req.body.description,
+          price: req.body.price,
+          number_in_stock: req.body.number_in_stock,
+          _id:req.params.id //This is required, or a new ID will be assigned!
+         });
+
+      if (!errors.isEmpty()) {
+          // There are errors. Render form again with sanitized values/error messages.
+
+          // Get all authors and genres for form.
+          async.parallel({
+            categories: function(callback) {
+                Category.find(callback);
+            },
+          }, function(err, results) {
+              if (err) { return next(err); }
+              res.render('item_form', { title: 'Update Item', categories: results.categories, item: item, errors: errors.array() });
+          });
+          return;
+      }
+      else {
+          // Data from form is valid. Update the record.
+          Item.findByIdAndUpdate(req.params.id, item, {}, function (err,theitem) {
+              if (err) { return next(err); }
+                 // Successful - redirect to item detail page.
+                 res.redirect(theitem.url);
+              });
+      }
+  }
+];
